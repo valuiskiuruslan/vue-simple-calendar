@@ -88,11 +88,11 @@
                 isAddNewEvent: false,
                 addedWorkouts: 1, // todo replace with 0
                 items: [
-                    {
-                        id: "e1",
-                        startDate: this.thisMonth(15, 18, 30),
-                        title: "title",
-                    }
+                    // {
+                    //     id: "e1",
+                    //     startDate: this.thisMonth(15, 18, 30),
+                    //     title: "title",
+                    // }
                 ],
             }
         },
@@ -117,9 +117,10 @@
                     let newEventDate = new Date(this.itemEventDate);
                     // count added event on the week
                     let countAddedWorkoutsForWeek = 0;
-                    let weekDateStart = 10; // todo calculate start of the week
+                    // let weekDateStart = 10; // todo calculate start of the week
+                    let weekDateStart = this.beginningOfWeek(newEventDate, 0).getDate(); // todo calculate start of the week
                     let weekDateEnd = weekDateStart + 6;
-
+                    console.log(weekDateStart);
                     while (weekDateStart <= weekDateEnd) {
                         this.items.forEach((item) => {
                             let itemDate = new Date(item.startDate);
