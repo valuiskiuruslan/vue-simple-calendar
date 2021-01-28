@@ -2,35 +2,21 @@
     <div id="app">
         <div v-if="messageError" class="notification is-danger">{{ messageError }}</div>
         <div v-else-if="message" class="notification is-success">{{ message }}</div>
-        <div class="calendar-wrapper">
-            <div class="calendar-controls">
-                <div class="box" v-if="isAddNewEvent">
-                    <div class="field">
-                        <label class="label">Title</label>
-                        <div class="control">
-                            <input v-model="itemTitle" class="input" type="text" required />
-                        </div>
+            <template v-if="isAddNewEvent">
+                <div class="control-ml">
+                    <div class="calendar-form-wrapper">
+                        <label class="calendar-time-label">
+                            Event time
+                        <span class="view-item-selected-date">{{itemEventDate}}</span>
+                        </label>
+                        <input class="control-input-width" v-model="itemTimeStart" type="time" required />
+                        <button class="calendar-btn-add-item" @click="clickAddItem">
+                            Add Item
+                        </button>
                     </div>
-
-                    <div class="field">
-                        <label class="label">Event date</label>
-                        <div class="control">
-                            <input v-model="itemEventDate" class="input" type="date" required />
-                        </div>
-                    </div>
-
-                    <div class="field">
-                        <label class="label">Time start</label>
-                        <div class="control">
-                            <input v-model="itemTimeStart" class="input" type="time" required />
-                        </div>
-                    </div>
-
-                    <button class="button is-info" @click="clickAddItem">
-                        Add Item
-                    </button>
                 </div>
-            </div>
+            </template>
+        <div class="calendar-wrapper">
             <div class="calendar-parent">
                 <calendar-view
                         :items="items"
@@ -48,6 +34,7 @@
                             slot="header"
                             slot-scope="{ headerProps }"
                             :header-props="headerProps"
+                            @input="setShowDate"
                     />
                 </calendar-view>
             </div>
@@ -66,6 +53,14 @@
     } from "vue-simple-calendar" // published version
     //} from "../../vue-simple-calendar/src/components/bundle.js" // local repo
 
+    const axios = require("axios").default;
+    const config = {
+        headers: {
+            "Accept": "*/*",
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+        },
+    };
     const COUNT_WORKOUTS_TOTAL = 9;
     const COUNT_WORKOUTS_WEEK = 3;
 
@@ -80,7 +75,7 @@
             return {
                 showDate: new Date(),
                 useDefaultTheme: true,
-                itemTitle: "",
+                itemTitle: "Workout",
                 itemEventDate: "",
                 itemTimeStart: "",
                 message: "",
@@ -102,6 +97,37 @@
                     "theme-default": this.useDefaultTheme,
                 }
             },
+        },
+        created: function () {
+            // let params = new URLSearchParams();
+            // params.append("action", "get_calendar_items");
+            axios.get("/wp-admin/admin-ajax.php?action=get_calendar_items", config)
+                .then((response) => {
+                    console.log(response);
+                    let workouts = response.data;
+                    workouts.forEach((workout, index) => {
+                        let workoutTimeStamp = parseInt(workout);
+                        if (workoutTimeStamp) {
+                            console.log(new Date(workoutTimeStamp));
+                            this.items.push({
+                                id: "e" + index,
+                                startDate: new Date(workoutTimeStamp),
+                                title: "Workout",
+                            });
+                        }
+                    });
+                    console.log(this.items);
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+            // this.items = [
+            //     {
+            //         id: "e1",
+            //         startDate: this.thisMonth(15, 18, 30),
+            //         title: "title",
+            //     }
+            // ];
         },
         methods: {
             thisMonth(d, h, m) {
@@ -154,7 +180,12 @@
                                 title: this.itemTitle,
                                 id: "e" + Math.random().toString(36).substr(2, 10),
                             });
-
+                            let params = new URLSearchParams();
+                            params.append("action", "submit_calendar");
+                            this.items.forEach((item, index) => {
+                                params.append("workout" + (index + 1), item.startDate.getTime());
+                            });
+                            axios.post("/wp-admin/admin-ajax.php", params, config);
                             this.message = "You added a calendar item!";
                             this.messageError = "";
                             this.addedWorkouts++;
@@ -200,11 +231,17 @@
             },
             onClickItem(e) {
                 this.items =  this.items.filter(function(item) {
+                    console.log(item.id !== e.id);
                     return item.id !== e.id;
                 });
 
                 this.message = `You removed: ${e.id}`;
                 this.messageError = "";
+            },
+
+            setShowDate(d) {
+                this.message = `Changing calendar view to ${d.toLocaleDateString()}`
+                this.showDate = d
             },
         },
     }
